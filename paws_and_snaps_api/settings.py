@@ -115,13 +115,14 @@ MIDDLEWARE = [
 
 # If 'CLIENT_ORIGIN' is set in the environment, use it for CORS_ALLOWED_ORIGINS
 if 'CLIENT_ORIGIN' in os.environ:
+    client_origin = os.environ.get('CLIENT_ORIGIN', '').rstrip('/')
     CORS_ALLOWED_ORIGINS = [
-        os.environ.get('CLIENT_ORIGIN')
+        client_origin
     ]
 else:
     # Provide a default value for CORS_ALLOWED_ORIGINS (e.g., production URL)
     CORS_ALLOWED_ORIGINS = [
-        'https://pawfect-pics-87d81c100ee5.herokuapp.com',  
+        'https://paws-and-snaps.onrender.com',
         'http://localhost:3000',
         'http://127.0.0.1:3000',
     ]
@@ -146,6 +147,7 @@ if 'CLIENT_ORIGIN_DEV' in os.environ:
 else:
     # Provide a default value for CORS_ALLOWED_ORIGIN_REGEXES
     CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^https://.*\.onrender\.com$",
         r"^http://localhost:3000$",
         r"^http://127.0.0.1:3000$",  # Fallback regex
     ]
