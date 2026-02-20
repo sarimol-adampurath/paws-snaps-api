@@ -27,27 +27,22 @@ DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [(
-        'rest_framework.authentication.SessionAuthentication'
-        if 'DEV' in os.environ
-        else 'dj_rest_auth.jwt_auth.JWTCookieAuthentication'
-    )],
-    'DEFAULT_PAGINATION_CLASS':
-        'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'dj_rest_auth.jwt_auth.JWTCookieAuthentication',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
     'DATETIME_FORMAT': '%d %b %Y',
-}
-if 'DEV' not in os.environ:
-    REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'] = [
+    'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
-    ]
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
+}
 
-REST_USE_JWT = True
-JWT_AUTH_SECURE = True
-JWT_AUTH_COOKIE = 'my-app-auth'
-JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'
-JWT_AUTH_SAMESITE = 'None'
+
 
 
 REST_AUTH_SERIALIZERS = {
@@ -62,9 +57,18 @@ REST_AUTH_SERIALIZERS = {
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('1', 'true', 'yes', 'on')
 
-ALLOWED_HOSTS = ['127.0.0.1','paws-and-snaps-d602158cc7f7.herokuapp.com']
+allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '')
+if allowed_hosts_env:
+    ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',') if host.strip()]
+else:
+    ALLOWED_HOSTS = [
+        '127.0.0.1',
+        'localhost',
+        '.onrender.com',
+        'paws-and-snaps-d602158cc7f7.herokuapp.com',
+    ]
 
 
 # Application definition
@@ -82,6 +86,7 @@ INSTALLED_APPS = [
     'django_filters',
     'rest_framework.authtoken',
     'dj_rest_auth',
+    'rest_framework_simplejwt',
     'django.contrib.sites',
     'allauth',
     'allauth.account',
@@ -117,6 +122,8 @@ else:
     # Provide a default value for CORS_ALLOWED_ORIGINS (e.g., production URL)
     CORS_ALLOWED_ORIGINS = [
         'https://pawfect-pics-87d81c100ee5.herokuapp.com',  
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
     ]
 
 if 'CLIENT_ORIGIN_DEV' in os.environ:
@@ -139,9 +146,13 @@ if 'CLIENT_ORIGIN_DEV' in os.environ:
 else:
     # Provide a default value for CORS_ALLOWED_ORIGIN_REGEXES
     CORS_ALLOWED_ORIGIN_REGEXES = [
-        r'https://pawfect-pics-87d81c100ee5.herokuapp.com',  # Fallback regex
+        r"^http://localhost:3000$",
+        r"^http://127.0.0.1:3000$",  # Fallback regex
     ]
+
 CORS_ALLOW_CREDENTIALS = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
 
 ROOT_URLCONF = 'paws_and_snaps_api.urls'
 
@@ -163,32 +174,24 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'paws_and_snaps_api.wsgi.application'
 CSRF_TRUSTED_ORIGINS = [
-    "http://127.0.0.1:8000",
-    "http://localhost:8000",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
     "https://*.herokuapp.com",
+    "https://*.onrender.com",
 ]
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
+# Database
+# Forced to SQLite for local development
 
-if 'DEV' in os.environ:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
-    
-else:
-    DATABASES = {
-        'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
-    }
+}
 
-    
-
-
-# Password validation
-# https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -229,3 +232,25 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# To ensure cookies are sent and accepted on local development
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SECURE = False # Only True in production/Heroku
+
+REST_AUTH_TOKEN_MODEL = None
+# The new way for dj-rest-auth v7+
+REST_AUTH = {
+    'USE_JWT': True,
+    'JWT_AUTH_COOKIE': 'my-app-auth',
+    'JWT_AUTH_REFRESH_COOKIE': 'my-refresh-token',
+    'JWT_AUTH_HTTPONLY': True,
+    'JWT_AUTH_SECURE': False,
+    'JWT_AUTH_SAMESITE': 'Lax',
+    'USER_DETAILS_SERIALIZER': 'paws_and_snaps_api.serializers.CurrentUserSerializer',
+}
+JWT_AUTH_COOKIE = 'my-app-auth'
+JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'
+JWT_AUTH_SAMESITE = 'Lax'
+JWT_AUTH_SECURE = False
+JWT_AUTH_HTTPONLY = True
